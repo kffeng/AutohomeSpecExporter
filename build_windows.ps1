@@ -3,6 +3,12 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $Root
 
+function Assert-LastExitCode([string]$Step) {
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Step failed with exit code $LASTEXITCODE."
+    }
+}
+
 Write-Host "==> Check Python" -ForegroundColor Cyan
 $Python = Get-Command python -ErrorAction SilentlyContinue
 if (-not $Python) {
@@ -12,18 +18,23 @@ if (-not $Python) {
 $Venv = Join-Path $Root ".build-venv"
 if (-not (Test-Path $Venv)) {
     python -m venv $Venv
+    Assert-LastExitCode "Create virtual environment"
 }
 $VenvPython = Join-Path $Venv "Scripts\python.exe"
 
 Write-Host "==> Install build dependencies" -ForegroundColor Cyan
 & $VenvPython -m pip install --upgrade pip
+Assert-LastExitCode "Upgrade pip"
 & $VenvPython -m pip install -r (Join-Path $Root "requirements-build.txt")
+Assert-LastExitCode "Install build dependencies"
 
 Write-Host "==> Run tests" -ForegroundColor Cyan
 & $VenvPython -m unittest discover -s tests -v
+Assert-LastExitCode "Run tests"
 
 Write-Host "==> Build Windows application" -ForegroundColor Cyan
 & $VenvPython -m PyInstaller --clean --noconfirm (Join-Path $Root "packaging\autohome_exporter.spec")
+Assert-LastExitCode "Build Windows application"
 
 $Candidates = @(
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
@@ -37,6 +48,7 @@ if (-not $Iscc) {
 
 Write-Host "==> Build installer" -ForegroundColor Cyan
 & $Iscc (Join-Path $Root "packaging\installer.iss")
+Assert-LastExitCode "Build installer"
 
 Write-Host "==> Build portable ZIP" -ForegroundColor Cyan
 $ZipPath = Join-Path $Root "dist\AutohomeSpecExporter_Portable_v1.0.0.zip"
