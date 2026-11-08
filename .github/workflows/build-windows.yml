@@ -1,0 +1,40 @@
+name: Build Autohome Spec Exporter for Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - "autohome-exporter-v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          architecture: "x64"
+          cache: "pip"
+          cache-dependency-path: requirements-build.txt
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: powershell
+        run: .\build_windows.ps1
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutohomeSpecExporter-Windows
+          path: |
+            dist/AutohomeSpecExporter_Setup_v1.0.0.exe
+            dist/AutohomeSpecExporter_Portable_v1.0.0.zip
+          if-no-files-found: error

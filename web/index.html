@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f8fc">
+  <title>汽车之家配置采集器</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/styles.css?v=1.0.0">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" role="img">
+          <path d="M8 29.5 11.4 19c.8-2.4 3-4 5.6-4h14c2.6 0 4.8 1.6 5.6 4L40 29.5v7a2 2 0 0 1-2 2h-3.4a2 2 0 0 1-2-2V35H15.4v1.5a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2v-7Z" fill="currentColor" opacity=".18"/>
+          <path d="M11 27h26M14.5 20.5h19M15.5 32h.01M32.5 32h.01" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M15 12h18M18 8h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" opacity=".55"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">汽车配置采集器</div>
+        <div class="brand-sub">Autohome Spec Studio</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span class="local-pill"><i></i>本地安全运行</span>
+      <button class="icon-btn" id="openFolderBtn" type="button" title="打开导出文件夹">
+        <svg viewBox="0 0 24 24"><path d="M3.5 6.5A1.5 1.5 0 0 1 5 5h4l2 2h8a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 19H5a1.5 1.5 0 0 1-1.5-1.5v-11Z"/></svg>
+      </button>
+      <button class="text-btn" id="shutdownBtn" type="button">退出程序</button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow"><span></span>汽车之家 · 在售与停售车型</div>
+      <h1>把参数配置，整理成<br><em>可以直接交付的 Excel</em></h1>
+      <p class="hero-copy">粘贴一个汽车之家车系网址。工具会自动补齐在售、停售车型，按年款和状态生成清晰、美观、可筛选的配置工作簿。</p>
+
+      <form class="url-card" id="scrapeForm">
+        <label for="urlInput">汽车之家车系网址</label>
+        <div class="url-row">
+          <div class="input-wrap">
+            <svg class="input-icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/></svg>
+            <input id="urlInput" name="url" type="text" autocomplete="off" spellcheck="false" placeholder="https://www.autohome.com.cn/config/series/8241.html">
+          </div>
+          <button class="primary-btn" id="scrapeBtn" type="submit">
+            <span>开始抓取</span>
+            <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+        <div class="form-foot">
+          <div class="examples">
+            <span>试试示例</span>
+            <button type="button" data-example="https://www.autohome.com.cn/config/series/8241.html">长安启源 Q05</button>
+            <button type="button" data-example="https://www.autohome.com.cn/config/series/66.html">宝马 3 系</button>
+          </div>
+          <div class="privacy"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.4 2.9 8.5 7 10 4.1-1.5 7-5.6 7-10V6l-7-3Z"/><path d="m9.5 12 1.7 1.7 3.5-3.8"/></svg>数据只在本机处理</div>
+        </div>
+      </form>
+
+      <div class="promise-row">
+        <div><b>01</b><span>自动识别车系</span></div>
+        <div><b>02</b><span>补齐历史停售</span></div>
+        <div><b>03</b><span>生成分年工作表</span></div>
+        <div><b>04</b><span>一键导出 XLSX</span></div>
+      </div>
+    </section>
+
+    <section class="progress-card hidden" id="progressCard" aria-live="polite">
+      <div class="progress-top">
+        <div>
+          <div class="progress-kicker" id="progressKicker">正在连接汽车之家</div>
+          <h2 id="progressTitle">正在读取车系数据</h2>
+        </div>
+        <div class="progress-number" id="progressNumber">0<span>%</span></div>
+      </div>
+      <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="step-grid" id="stepGrid">
+        <div class="step active" data-step="0"><i>1</i><span>识别车系</span></div>
+        <div class="step" data-step="1"><i>2</i><span>抓取在售</span></div>
+        <div class="step" data-step="2"><i>3</i><span>补齐停售</span></div>
+        <div class="step" data-step="3"><i>4</i><span>整理配置</span></div>
+        <div class="step" data-step="4"><i>5</i><span>完成</span></div>
+      </div>
+      <div class="progress-message" id="progressMessage">首次抓取可能需要 10–30 秒，请保持页面打开。</div>
+      <div class="error-box hidden" id="errorBox">
+        <strong>抓取没有完成</strong>
+        <p id="errorText"></p>
+        <button type="button" class="ghost-btn" id="retryBtn">重新尝试</button>
+      </div>
+    </section>
+
+    <section class="results hidden" id="results">
+      <div class="result-head">
+        <div>
+          <div class="eyebrow compact"><span></span>抓取完成</div>
+          <h2 id="seriesTitle">车型全量配置</h2>
+          <p id="seriesMeta"></p>
+        </div>
+        <div class="result-actions">
+          <button class="ghost-btn" id="refreshBtn" type="button">
+            <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg>重新抓取
+          </button>
+          <button class="primary-btn export-btn" id="exportBtn" type="button">
+            <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>导出全部 Excel
+          </button>
+        </div>
+      </div>
+
+      <div class="stats-grid" id="statsGrid">
+        <article class="stat-card accent"><span>在售车型</span><strong id="onsaleStat">0</strong><small>当前在售车款</small></article>
+        <article class="stat-card warm"><span>停售车型</span><strong id="stopsaleStat">0</strong><small>历史停售车款</small></article>
+        <article class="stat-card"><span>年款数量</span><strong id="yearStat">0</strong><small>覆盖年款</small></article>
+        <article class="stat-card"><span>配置项目</span><strong id="paramStat">0</strong><small>参数与配置行</small></article>
+      </div>
+
+      <div class="notice hidden" id="warningNotice"></div>
+
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="status-tabs" id="statusTabs">
+            <button class="active" data-status="all" type="button">全部 <span id="allCount">0</span></button>
+            <button data-status="20" type="button">在售 <span id="onsaleCount">0</span></button>
+            <button data-status="40" type="button">停售 <span id="stopsaleCount">0</span></button>
+          </div>
+          <div class="filters">
+            <label class="select-wrap">
+              <span class="sr-only">筛选年款</span>
+              <select id="yearFilter"><option value="all">全部年款</option></select>
+              <svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
+            </label>
+            <label class="search-wrap">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg>
+              <input id="searchInput" type="search" placeholder="搜索车款">
+            </label>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="variant-table">
+            <thead>
+              <tr><th>年款</th><th>状态</th><th>车款名称</th><th>厂商指导价</th><th>优惠金额</th><th>价格类型</th></tr>
+            </thead>
+            <tbody id="variantBody"></tbody>
+          </table>
+        </div>
+        <div class="table-empty hidden" id="tableEmpty">没有符合筛选条件的车款</div>
+        <div class="table-footer">
+          <span id="tableCount">共 0 个车款</span>
+          <span>导出文件会自动按“年款 + 状态”拆分工作表</span>
+        </div>
+      </div>
+
+      <div class="workbook-note">
+        <div class="note-icon">
+          <svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5V3Z"/><path d="M15 3v5h5M8 12h8M8 16h8"/></svg>
+        </div>
+        <div><strong>Excel 会包含什么？</strong><p>一张车型总览，加每个年款/状态对应的配置工作表；还有数据来源与符号说明。表头冻结、筛选器、配色和打印设置都已配置好。</p></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>汽车之家配置采集器 · 仅在本机运行</span>
+    <span>数据来自公开页面，仅供参考</span>
+  </footer>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="/static/app.js?v=1.0.0"></script>
+</body>
+</html>
