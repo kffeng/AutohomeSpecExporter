@@ -27,7 +27,7 @@ jobs:
         run: choco install innosetup --no-progress -y
 
       - name: Build installer
-        shell: powershell
+        shell: pwsh
         run: .\build_windows.ps1
 
       - name: Upload Windows installer
