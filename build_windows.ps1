@@ -51,12 +51,12 @@ Write-Host "==> Build installer" -ForegroundColor Cyan
 Assert-LastExitCode "Build installer"
 
 Write-Host "==> Build portable ZIP" -ForegroundColor Cyan
-$ZipPath = Join-Path $Root "dist\AutohomeSpecExporter_Portable_v1.0.0.zip"
+$ZipPath = Join-Path $Root "dist\AutohomeSpecExporter_Portable_v1.0.1.zip"
 if (Test-Path $ZipPath) { Remove-Item $ZipPath -Force }
 Compress-Archive -Path (Join-Path $Root "dist\AutohomeSpecExporter\*") -DestinationPath $ZipPath
 
 Write-Host ""
 Write-Host "Build completed:" -ForegroundColor Green
 Write-Host "  App folder: $Root\dist\AutohomeSpecExporter"
-Write-Host "  Installer: $Root\dist\AutohomeSpecExporter_Setup_v1.0.0.exe"
+Write-Host "  Installer: $Root\dist\AutohomeSpecExporter_Setup_v1.0.1.exe"
 Write-Host "  Portable ZIP: $ZipPath"

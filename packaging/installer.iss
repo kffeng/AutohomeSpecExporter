@@ -1,5 +1,5 @@
 ﻿#define MyAppName "汽车之家配置采集器"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppPublisher "Autohome Spec Studio"
 #define MyAppExeName "AutohomeSpecExporter.exe"
 

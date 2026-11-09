@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from exporter import export_snapshot
-from scraper import AutohomeError, FetchResult, extract_series_id, merge_payloads
+from scraper import AutohomeError, FetchResult, _years_to_query, extract_series_id, merge_payloads
 
 
 class ScraperTests(unittest.TestCase):
@@ -40,6 +40,39 @@ class ScraperTests(unittest.TestCase):
         self.assertEqual(snapshot["stats"]["stopsale"], 7)
         self.assertEqual(snapshot["stats"]["variants"], 14)
         self.assertEqual(snapshot["years"], [2027, 2026])
+
+
+class StatusThirtyTests(unittest.TestCase):
+    def test_status_thirty_is_onsale_and_forty_is_stopsale(self) -> None:
+        fixtures = Path(__file__).parent / "fixtures"
+        default = json.loads((fixtures / "a06_default.json").read_text(encoding="utf-8"))
+        stopped = json.loads((fixtures / "a06_2026.json").read_text(encoding="utf-8"))
+        self.assertEqual(_years_to_query(default), [2027, 2026])
+        default_snapshot = merge_payloads([FetchResult(None, default)])
+        self.assertEqual(default_snapshot["stats"]["onsale"], 16)
+        self.assertEqual(default_snapshot["stats"]["stopsale"], 0)
+        self.assertEqual(default_snapshot["stats"]["variants"], 16)
+        snapshot = merge_payloads(
+            [FetchResult(None, default), FetchResult(2026, stopped)]
+        )
+        self.assertEqual(snapshot["series_name"], "长安启源A06")
+        self.assertEqual(snapshot["stats"]["onsale"], 16)
+        self.assertEqual(snapshot["stats"]["stopsale"], 1)
+        self.assertEqual(snapshot["stats"]["variants"], 17)
+        statuses = {variant["specid"]: variant["status_label"] for variant in snapshot["variants"]}
+        self.assertEqual(statuses[77262], "在售")
+        self.assertEqual(statuses[72997], "停售")
+        self.assertEqual(statuses[79411], "在售")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = export_snapshot(snapshot, Path(temp_dir))
+            from openpyxl import load_workbook
+
+            workbook = load_workbook(output, data_only=True)
+            self.assertIn("2027在售", workbook.sheetnames)
+            self.assertIn("2026在售", workbook.sheetnames)
+            self.assertIn("2026停售", workbook.sheetnames)
+            self.assertEqual(workbook["2026在售"].max_column, 13)
+            self.assertEqual(workbook["2026停售"].max_column, 4)
 
 
 class ExporterTests(unittest.TestCase):

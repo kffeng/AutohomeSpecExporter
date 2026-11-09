@@ -320,15 +320,17 @@ def export_snapshot(snapshot: dict[str, Any], output_dir: Path) -> Path:
 
     used_names: set[str] = {"车型清单", "数据说明"}
     sheet_links: dict[int, str] = {}
-    groups: dict[tuple[int, int], list[dict[str, Any]]] = {}
+    groups: dict[tuple[int, str], list[dict[str, Any]]] = {}
     for variant in snapshot["variants"]:
-        groups.setdefault((variant["year"], variant["status"]), []).append(variant)
-    ordered_groups = sorted(groups.items(), key=lambda item: (-item[0][0], 0 if item[0][1] == 20 else 1))
+        status_label = "在售" if variant["status"] in (20, 30) else "停售"
+        groups.setdefault((variant["year"], status_label), []).append(variant)
+    ordered_groups = sorted(
+        groups.items(), key=lambda item: (-item[0][0], 0 if item[0][1] == "在售" else 1)
+    )
 
     config_sheets: list[str] = []
     table_index = 1
-    for (year, status), variants in ordered_groups:
-        status_label = "在售" if status == 20 else "停售"
+    for (year, status_label), variants in ordered_groups:
         chunks = [variants[i : i + MAX_VARIANTS_PER_SHEET] for i in range(0, len(variants), MAX_VARIANTS_PER_SHEET)]
         for chunk_index, chunk in enumerate(chunks, start=1):
             suffix = f"-{chunk_index}" if len(chunks) > 1 else ""

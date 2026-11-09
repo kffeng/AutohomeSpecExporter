@@ -209,7 +209,8 @@ function renderResults(job) {
 
 function filteredVariants() {
   return state.variants.filter((variant) => {
-    if (state.status !== "all" && String(variant.status) !== state.status) return false;
+    if (state.status === "20" && ![20, 30].includes(variant.status)) return false;
+    if (state.status === "40" && variant.status !== 40) return false;
     if (state.year !== "all" && String(variant.year) !== state.year) return false;
     if (state.query) {
       const haystack = `${variant.specname || ""} ${variant.full_name || ""}`.toLowerCase();

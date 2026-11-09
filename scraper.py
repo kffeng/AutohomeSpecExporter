@@ -20,8 +20,8 @@ USER_AGENT = (
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/139.0 Safari/537.36"
 )
-STATUS_LABELS = {20: "在售", 40: "停售", 10: "待售"}
-STATUS_ORDER = {20: 0, 40: 1, 10: 2}
+STATUS_LABELS = {10: "待售", 20: "在售", 30: "在售", 40: "停售"}
+STATUS_ORDER = {20: 0, 30: 0, 40: 1, 10: 2}
 
 ProgressCallback = Callable[[int, str], None]
 
@@ -155,6 +155,22 @@ def _installed_years(payload: dict[str, Any]) -> list[int]:
     return sorted((year for year in years if 2000 <= year <= current_year + 2), reverse=True)
 
 
+def _years_to_query(payload: dict[str, Any]) -> list[int]:
+    """默认页面已经带停售车型的年份不再重复查询隐藏停售页。"""
+    result = payload.get("result") or {}
+    years = _installed_years(payload)
+    stop_years: set[int] = set()
+    for spec in (result.get("specinfo") or {}).get("specitems") or []:
+        try:
+            status = int(spec.get("specstatus", 0))
+            year = int(spec.get("year"))
+        except (TypeError, ValueError):
+            continue
+        if status == 40:
+            stop_years.add(year)
+    return [year for year in years if year not in stop_years]
+
+
 def format_cell(model: dict[str, Any]) -> str:
     if not model:
         return "-"
@@ -224,7 +240,7 @@ def merge_payloads(fetches: list[FetchResult], warnings: list[str] | None = None
                 status = int(spec.get("specstatus", 0))
             except (KeyError, TypeError, ValueError):
                 continue
-            if status not in (20, 40):
+            if status not in (20, 30, 40):
                 continue
             year = spec.get("year") or fetch.year
             try:
@@ -303,7 +319,7 @@ def merge_payloads(fetches: list[FetchResult], warnings: list[str] | None = None
                 }
             )
 
-    onsale = sum(1 for variant in variants if variant["status"] == 20)
+    onsale = sum(1 for variant in variants if variant["status"] in (20, 30))
     stopsale = sum(1 for variant in variants if variant["status"] == 40)
     years = sorted({variant["year"] for variant in variants if variant["year"]}, reverse=True)
     series_name = _infer_series_name(variants)
@@ -344,7 +360,7 @@ def scrape_series(series_id: str, progress: ProgressCallback | None = None) -> d
     if not (default_result.get("specinfo") or {}).get("specitems"):
         raise AutohomeError("汽车之家没有返回车型数据，请确认网址是否正确。")
 
-    years = _installed_years(default_payload)
+    years = _years_to_query(default_payload)
     fetches = [FetchResult(None, default_payload)]
     warnings: list[str] = []
     if years:
