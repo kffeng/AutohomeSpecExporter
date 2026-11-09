@@ -28,6 +28,10 @@ Assert-LastExitCode "Upgrade pip"
 & $VenvPython -m pip install -r (Join-Path $Root "requirements-build.txt")
 Assert-LastExitCode "Install build dependencies"
 
+Write-Host "==> Embed web assets" -ForegroundColor Cyan
+& $VenvPython (Join-Path $Root "packaging\embed_web_assets.py")
+Assert-LastExitCode "Embed web assets"
+
 Write-Host "==> Run tests" -ForegroundColor Cyan
 & $VenvPython -m unittest discover -s tests -v
 Assert-LastExitCode "Run tests"
@@ -51,12 +55,12 @@ Write-Host "==> Build installer" -ForegroundColor Cyan
 Assert-LastExitCode "Build installer"
 
 Write-Host "==> Build portable ZIP" -ForegroundColor Cyan
-$ZipPath = Join-Path $Root "dist\AutohomeSpecExporter_Portable_v1.0.1.zip"
+$ZipPath = Join-Path $Root "dist\AutohomeSpecExporter_Portable_v1.0.2.zip"
 if (Test-Path $ZipPath) { Remove-Item $ZipPath -Force }
 Compress-Archive -Path (Join-Path $Root "dist\AutohomeSpecExporter\*") -DestinationPath $ZipPath
 
 Write-Host ""
 Write-Host "Build completed:" -ForegroundColor Green
 Write-Host "  App folder: $Root\dist\AutohomeSpecExporter"
-Write-Host "  Installer: $Root\dist\AutohomeSpecExporter_Setup_v1.0.1.exe"
+Write-Host "  Installer: $Root\dist\AutohomeSpecExporter_Setup_v1.0.2.exe"
 Write-Host "  Portable ZIP: $ZipPath"

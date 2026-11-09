@@ -1,5 +1,5 @@
 ﻿#define MyAppName "汽车之家配置采集器"
-#define MyAppVersion "1.0.1"
+#define MyAppVersion "1.0.2"
 #define MyAppPublisher "Autohome Spec Studio"
 #define MyAppExeName "AutohomeSpecExporter.exe"
 
@@ -22,7 +22,7 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
-CloseApplications=yes
+CloseApplications=force
 RestartApplications=no
 MinVersion=10.0
 

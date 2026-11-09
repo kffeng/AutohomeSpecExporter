@@ -7,7 +7,7 @@
 客户只需要运行一个 Windows 安装包：
 
 ```text
-AutohomeSpecExporter_Setup_v1.0.1.exe
+AutohomeSpecExporter_Setup_v1.0.2.exe
 ```
 
 安装后双击“汽车之家配置采集器”桌面图标：
@@ -63,14 +63,14 @@ build_windows.bat
 
 ```text
 dist\AutohomeSpecExporter\AutohomeSpecExporter.exe
-dist\AutohomeSpecExporter_Setup_v1.0.1.exe
-dist\AutohomeSpecExporter_Portable_v1.0.1.zip
+dist\AutohomeSpecExporter_Setup_v1.0.2.exe
+dist\AutohomeSpecExporter_Portable_v1.0.2.zip
 ```
 
 正式发给客户时推荐发送：
 
 ```text
-AutohomeSpecExporter_Setup_v1.0.1.exe
+AutohomeSpecExporter_Setup_v1.0.2.exe
 ```
 
 不要只发送 `AutohomeSpecExporter.exe`，因为 PyInstaller 使用 one-folder 模式，运行还需要旁边的 `_internal` 文件。

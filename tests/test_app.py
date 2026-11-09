@@ -1,16 +1,22 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from exporter import export_snapshot
 from scraper import AutohomeError, FetchResult, _years_to_query, extract_series_id, merge_payloads
+
+TEST_DATA = tempfile.mkdtemp(prefix="autohome-exporter-tests-")
+os.environ.setdefault("AUTOHOME_APP_DATA", TEST_DATA)
+import main as app_main
 
 
 class ScraperTests(unittest.TestCase):
@@ -73,6 +79,33 @@ class StatusThirtyTests(unittest.TestCase):
             self.assertIn("2026停售", workbook.sheetnames)
             self.assertEqual(workbook["2026在售"].max_column, 13)
             self.assertEqual(workbook["2026停售"].max_column, 4)
+
+
+class AppAssetTests(unittest.TestCase):
+    def test_web_assets_work_without_disk_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.object(app_main, "resource_path", return_value=Path(temp_dir)):
+                html = app_main.web_asset("index.html").decode("utf-8")
+                css = app_main.web_asset("styles.css").decode("utf-8")
+        self.assertIn("汽车之家配置采集器", html)
+        self.assertIn("--blue", css)
+
+    def test_flask_serves_embedded_page(self) -> None:
+        client = app_main.create_app().test_client()
+        self.assertEqual(client.get("/").status_code, 200)
+        self.assertEqual(client.get("/static/styles.css").status_code, 200)
+        self.assertEqual(client.get("/static/app.js").status_code, 200)
+        self.assertEqual(client.get("/favicon.ico").status_code, 200)
+
+    def test_old_version_is_shut_down(self) -> None:
+        old_health = {"name": app_main.APP_NAME, "version": "1.0.0"}
+        with patch.object(app_main, "saved_port", return_value=8765), patch.object(
+            app_main, "health_info", return_value=old_health
+        ), patch.object(app_main, "request_shutdown") as shutdown, patch.object(
+            app_main, "wait_until_down", return_value=True
+        ):
+            self.assertFalse(app_main.handle_existing_instance())
+            shutdown.assert_called_once_with(8765)
 
 
 class ExporterTests(unittest.TestCase):

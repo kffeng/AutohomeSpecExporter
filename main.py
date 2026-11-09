@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import base64
 import json
 import logging
+import mimetypes
 import os
 import platform
 import socket
@@ -16,16 +18,17 @@ from datetime import datetime, timedelta
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any
-from urllib.request import urlopen
+from urllib.request import Request as UrlRequest, urlopen
 
-from flask import Flask, jsonify, request, send_file, send_from_directory
+from flask import Flask, Response, jsonify, request, send_file
 from werkzeug.serving import make_server
 
+from embedded_assets import WEB_ASSETS_B64
 from exporter import export_snapshot, safe_filename
 from scraper import AutohomeError, extract_series_id, scrape_series
 
 APP_NAME = "汽车之家配置采集器"
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.2"
 DEFAULT_PORT = 8765
 JOBS: dict[str, dict[str, Any]] = {}
 JOBS_LOCK = threading.Lock()
@@ -36,6 +39,20 @@ SERVER = None
 def resource_path(relative: str) -> Path:
     base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
     return base / relative
+
+
+def web_asset(filename: str) -> bytes:
+    if filename not in WEB_ASSETS_B64:
+        raise KeyError(filename)
+    disk_path = resource_path("web") / filename
+    if disk_path.is_file():
+        return disk_path.read_bytes()
+    return base64.b64decode(WEB_ASSETS_B64[filename])
+
+
+def web_response(filename: str) -> Response:
+    mime = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    return Response(web_asset(filename), mimetype=mime)
 
 
 def app_data_dir() -> Path:
@@ -190,8 +207,7 @@ def public_job(job: dict[str, Any]) -> dict[str, Any]:
 
 
 def create_app() -> Flask:
-    web_dir = resource_path("web")
-    app = Flask(__name__, static_folder=str(web_dir), static_url_path="/static")
+    app = Flask(__name__, static_folder=None)
     app.config["MAX_CONTENT_LENGTH"] = 64 * 1024
 
     @app.after_request
@@ -209,11 +225,19 @@ def create_app() -> Flask:
 
     @app.get("/")
     def index():
-        return send_from_directory(web_dir, "index.html")
+        return web_response("index.html")
 
     @app.get("/favicon.svg")
+    @app.get("/favicon.ico")
     def favicon():
-        return send_from_directory(web_dir, "favicon.svg")
+        return web_response("favicon.svg")
+
+    @app.get("/static/<path:filename>")
+    def static_asset(filename: str):
+        try:
+            return web_response(filename)
+        except KeyError:
+            return Response("Not Found", status=404, mimetype="text/plain")
 
     @app.get("/api/health")
     def health():
@@ -310,7 +334,10 @@ def create_app() -> Flask:
     def not_found(_error):
         if request.path.startswith("/api/"):
             return jsonify(error="接口不存在。"), 404
-        return send_from_directory(web_dir, "index.html")
+        try:
+            return web_response("index.html")
+        except KeyError:
+            return Response("页面资源缺失，请重新安装程序。", status=404, mimetype="text/plain")
 
     return app
 
@@ -336,18 +363,50 @@ def show_error_dialog(message: str) -> None:
             pass
 
 
-def health_ok(port: int) -> bool:
+def health_info(port: int) -> dict[str, Any] | None:
     try:
         with urlopen(f"http://127.0.0.1:{port}/api/health", timeout=0.8) as response:
+            if response.status != 200:
+                return None
+            data = json.loads(response.read().decode("utf-8"))
+            return data if data.get("name") == APP_NAME else None
+    except Exception:
+        return None
+
+
+def root_ok(port: int) -> bool:
+    try:
+        with urlopen(f"http://127.0.0.1:{port}/", timeout=1.2) as response:
             return response.status == 200
     except Exception:
         return False
 
 
+def request_shutdown(port: int) -> None:
+    try:
+        request = UrlRequest(
+            f"http://127.0.0.1:{port}/api/shutdown",
+            data=b"{}",
+            method="POST",
+            headers={"Content-Type": "application/json"},
+        )
+        with urlopen(request, timeout=1.5) as response:
+            response.read()
+    except Exception:
+        logger.exception("通知旧版本退出失败")
+
+
+def wait_until_down(port: int, timeout: float = 4.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if health_info(port) is None:
+            return True
+        time.sleep(0.15)
+    return False
+
+
 def find_port(start: int = DEFAULT_PORT) -> int:
     for port in range(start, start + 20):
-        if health_ok(port):
-            return port
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
@@ -362,12 +421,31 @@ def open_browser(url: str) -> None:
     webbrowser.open(url, new=1, autoraise=True)
 
 
+def handle_existing_instance() -> bool:
+    candidates: list[int] = []
+    for candidate in (saved_port(), DEFAULT_PORT):
+        if candidate and candidate not in candidates:
+            candidates.append(candidate)
+
+    for port in candidates:
+        info = health_info(port)
+        if not info:
+            continue
+        version = str(info.get("version") or "")
+        if version == APP_VERSION and root_ok(port):
+            open_browser(f"http://127.0.0.1:{port}")
+            return True
+
+        logger.info("发现旧实例 version=%s port=%s，准备退出旧进程", version, port)
+        request_shutdown(port)
+        wait_until_down(port)
+    return False
+
+
 def main() -> int:
     global SERVER
-    for candidate in (saved_port(), DEFAULT_PORT):
-        if candidate and health_ok(candidate):
-            open_browser(f"http://127.0.0.1:{candidate}")
-            return 0
+    if handle_existing_instance():
+        return 0
     try:
         port = find_port()
         app = create_app()
