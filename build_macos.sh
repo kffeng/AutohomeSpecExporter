@@ -2,9 +2,10 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION="1.0.2"
+VERSION="1.0.3"
 ARCH="$(uname -m)"
 VENV=".build-venv-mac"
+BACKEND_DIR="dist/AutohomeSpecExporter"
 APP="dist/AutohomeSpecExporter.app"
 DMG="dist/AutohomeSpecExporter_macOS_${ARCH}_v${VERSION}.dmg"
 ZIP="dist/AutohomeSpecExporter_macOS_${ARCH}_v${VERSION}.zip"
@@ -18,6 +19,17 @@ fi
 "$VENV/bin/python" packaging/embed_web_assets.py
 "$VENV/bin/python" -m unittest discover -s tests -v
 "$VENV/bin/python" -m PyInstaller --clean --noconfirm packaging/autohome_exporter_macos.spec
+
+rm -rf "$APP"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp packaging/macos/Info.plist "$APP/Contents/Info.plist"
+clang -O2 -Wall -Wextra -o "$APP/Contents/MacOS/AutohomeSpecExporter" packaging/macos/launcher.c
+cp packaging/macos/launcher.sh "$APP/Contents/MacOS/launcher.sh"
+chmod +x "$APP/Contents/MacOS/AutohomeSpecExporter" "$APP/Contents/MacOS/launcher.sh"
+cp assets/icon.icns "$APP/Contents/Resources/icon.icns"
+ditto "$BACKEND_DIR" "$APP/Contents/Resources/backend"
+printf 'APPL????' > "$APP/Contents/PkgInfo"
+plutil -lint "$APP/Contents/Info.plist"
 
 codesign --force --deep --sign - "$APP"
 codesign --verify --deep --strict --verbose=2 "$APP"

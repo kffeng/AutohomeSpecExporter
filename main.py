@@ -28,7 +28,7 @@ from exporter import export_snapshot, safe_filename
 from scraper import AutohomeError, extract_series_id, scrape_series
 
 APP_NAME = "汽车之家配置采集器"
-APP_VERSION = "1.0.2"
+APP_VERSION = "1.0.3"
 DEFAULT_PORT = 8765
 JOBS: dict[str, dict[str, Any]] = {}
 JOBS_LOCK = threading.Lock()

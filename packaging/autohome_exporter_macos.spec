@@ -4,7 +4,7 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 root = Path(SPECPATH).resolve().parent
 icon = str(root / "assets" / "icon.icns")
-version = "1.0.2"
+version = "1.0.3"
 
 datas = [
     (str(root / "web"), "web"),
@@ -59,21 +59,4 @@ coll = COLLECT(
     upx=False,
     upx_exclude=[],
     name="AutohomeSpecExporter",
-)
-
-app = BUNDLE(
-    coll,
-    name="AutohomeSpecExporter.app",
-    icon=icon,
-    bundle_identifier="com.kffeng.autohomespecexporter",
-    version=version,
-    info_plist={
-        "CFBundleDisplayName": "汽车之家配置采集器",
-        "CFBundleName": "AutohomeSpecExporter",
-        "CFBundleShortVersionString": version,
-        "CFBundleVersion": version,
-        "LSMinimumSystemVersion": "11.0",
-        "NSHighResolutionCapable": True,
-        "NSRequiresAquaSystemAppearance": False,
-    },
 )
