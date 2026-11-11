@@ -4,7 +4,7 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 root = Path(SPECPATH).resolve().parent
 icon = str(root / "assets" / "icon.icns")
-version = "1.0.7"
+version = "1.0.8"
 
 datas = [
     (str(root / "web"), "web"),

@@ -8,6 +8,7 @@ LOG_DIR="$DATA_DIR/logs"
 PORT_FILE="$DATA_DIR/runtime_port.txt"
 LOG_FILE="$LOG_DIR/launcher.log"
 FALLBACK_PORT="8765"
+EXPECTED_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_ROOT/Contents/Info.plist" 2>/dev/null || true)"
 
 mkdir -p "$LOG_DIR"
 
@@ -19,8 +20,12 @@ read_port() {
 
 ready() {
   local port="$1"
+  local health
   [ -n "$port" ] || return 1
-  /usr/bin/curl -fsS --max-time 1 "http://127.0.0.1:${port}/api/health" >/dev/null 2>&1 || return 1
+  health="$(/usr/bin/curl -fsS --max-time 1 "http://127.0.0.1:${port}/api/health" 2>/dev/null)" || return 1
+  if [ -n "$EXPECTED_VERSION" ]; then
+    printf '%s' "$health" | /usr/bin/grep -Eq "\"version\"[[:space:]]*:[[:space:]]*\"${EXPECTED_VERSION}\"" || return 1
+  fi
   /usr/bin/curl -fsS --max-time 1 "http://127.0.0.1:${port}/" >/dev/null 2>&1 || return 1
 }
 

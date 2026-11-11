@@ -59,8 +59,11 @@
     if (task.terminationStatus != 0) {
         return NO;
     }
-    NSString *body = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-    return [body containsString:@"汽车之家配置采集器"];
+    NSDictionary *info = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+    NSString *expectedVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
+    return [info isKindOfClass:[NSDictionary class]]
+        && [info[@"name"] isEqualToString:@"汽车之家配置采集器"]
+        && [info[@"version"] isEqualToString:expectedVersion];
 }
 
 - (void)checkBackend:(NSTimer *)timer {
