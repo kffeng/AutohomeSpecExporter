@@ -4,14 +4,16 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 root = Path(SPECPATH).resolve().parent
 icon = str(root / "assets" / "icon.icns")
-version = "1.0.3"
+version = "1.0.4"
 
 datas = [
     (str(root / "web"), "web"),
     (str(root / "assets" / "icon.png"), "assets"),
 ]
 datas += collect_data_files("openpyxl")
+datas += collect_data_files("certifi")
 hiddenimports = collect_submodules("openpyxl") + [
+    "certifi",
     "flask",
     "flask.json",
     "werkzeug.serving",

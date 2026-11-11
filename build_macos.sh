@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION="1.0.3"
+VERSION="1.0.4"
 ARCH="$(uname -m)"
 VENV=".build-venv-mac"
 BACKEND_DIR="dist/AutohomeSpecExporter"
@@ -23,7 +23,7 @@ fi
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp packaging/macos/Info.plist "$APP/Contents/Info.plist"
-clang -O2 -Wall -Wextra -o "$APP/Contents/MacOS/AutohomeSpecExporter" packaging/macos/launcher.c
+clang -O2 -Wall -Wextra -framework Cocoa -o "$APP/Contents/MacOS/AutohomeSpecExporter" packaging/macos/launcher.m
 cp packaging/macos/launcher.sh "$APP/Contents/MacOS/launcher.sh"
 chmod +x "$APP/Contents/MacOS/AutohomeSpecExporter" "$APP/Contents/MacOS/launcher.sh"
 cp assets/icon.icns "$APP/Contents/Resources/icon.icns"

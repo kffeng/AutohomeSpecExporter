@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from exporter import export_snapshot
-from scraper import AutohomeError, FetchResult, _years_to_query, extract_series_id, merge_payloads
+from scraper import AutohomeError, FetchResult, _ssl_context, _years_to_query, extract_series_id, merge_payloads
 
 TEST_DATA = tempfile.mkdtemp(prefix="autohome-exporter-tests-")
 os.environ.setdefault("AUTOHOME_APP_DATA", TEST_DATA)
@@ -96,6 +96,10 @@ class AppAssetTests(unittest.TestCase):
         self.assertEqual(client.get("/static/styles.css").status_code, 200)
         self.assertEqual(client.get("/static/app.js").status_code, 200)
         self.assertEqual(client.get("/favicon.ico").status_code, 200)
+
+    def test_ssl_context_has_trusted_certificates(self) -> None:
+        stats = _ssl_context().cert_store_stats()
+        self.assertGreater(stats.get("x509_ca", 0), 0)
 
     def test_old_version_is_shut_down(self) -> None:
         old_health = {"name": app_main.APP_NAME, "version": "1.0.0"}

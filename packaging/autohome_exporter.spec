@@ -11,7 +11,9 @@ datas = [
     (str(root / "assets" / "icon.png"), "assets"),
 ]
 datas += collect_data_files("openpyxl")
+datas += collect_data_files("certifi")
 hiddenimports = collect_submodules("openpyxl") + [
+    "certifi",
     "flask",
     "flask.json",
     "werkzeug.serving",

@@ -26,6 +26,15 @@ STATUS_ORDER = {20: 0, 30: 0, 40: 1, 10: 2}
 ProgressCallback = Callable[[int, str], None]
 
 
+def _ssl_context() -> ssl.SSLContext:
+    try:
+        import certifi
+
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
+
+
 class AutohomeError(RuntimeError):
     pass
 
@@ -92,7 +101,7 @@ def _request_json(url: str, referer: str) -> dict[str, Any]:
             "Connection": "close",
         },
     )
-    context = ssl.create_default_context()
+    context = _ssl_context()
     with urlopen(request, timeout=25, context=context) as response:
         raw = response.read()
     try:
