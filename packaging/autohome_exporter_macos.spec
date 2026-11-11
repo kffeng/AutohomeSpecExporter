@@ -4,7 +4,7 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 root = Path(SPECPATH).resolve().parent
 icon = str(root / "assets" / "icon.icns")
-version = "1.0.6"
+version = "1.0.7"
 
 datas = [
     (str(root / "web"), "web"),
@@ -30,7 +30,7 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=["tkinter", "pytest"],
-    noarchive=False,
+    noarchive=True,
 )
 
 pyz = PYZ(a.pure)

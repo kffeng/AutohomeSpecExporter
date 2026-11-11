@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION="1.0.6"
+VERSION="1.0.7"
 ARCH="$(uname -m)"
 VENV=".build-venv-mac"
 BACKEND_DIR="dist/AutohomeSpecExporter"
@@ -19,6 +19,7 @@ fi
 "$VENV/bin/python" packaging/embed_web_assets.py
 "$VENV/bin/python" -m unittest discover -s tests -v
 "$VENV/bin/python" -m PyInstaller --clean --noconfirm packaging/autohome_exporter_macos.spec
+"$BACKEND_DIR/AutohomeSpecExporter" --self-test
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"

@@ -28,7 +28,7 @@ from exporter import export_snapshot, safe_filename
 from scraper import AutohomeError, extract_series_id, scrape_series
 
 APP_NAME = "汽车之家配置采集器"
-APP_VERSION = "1.0.6"
+APP_VERSION = "1.0.7"
 DEFAULT_PORT = 8765
 JOBS: dict[str, dict[str, Any]] = {}
 JOBS_LOCK = threading.Lock()
@@ -184,6 +184,66 @@ def run_job(job_id: str, url: str, force_refresh: bool = False) -> None:
             error=message,
             completed_at=datetime.now().isoformat(timespec="seconds"),
         )
+
+
+def run_self_test() -> int:
+    import tempfile
+
+    snapshot = {
+        "series_id": "self-test",
+        "series_name": "导出自检",
+        "source_url": "https://www.autohome.com.cn/",
+        "fetched_at": datetime.now().isoformat(timespec="seconds"),
+        "variants": [
+            {
+                "specid": 1,
+                "specname": "2026款 测试车型",
+                "full_name": "测试车型 2026款 测试车型",
+                "year": 2026,
+                "status": 20,
+                "status_label": "在售",
+                "guide_price": "10.00万",
+                "discount": "",
+                "price_type": "指导价：",
+                "condition": [],
+            }
+        ],
+        "params": [
+            {
+                "group": "参数信息",
+                "category": "基本参数",
+                "name": "车型名称",
+                "values": {"1": "测试车型 2026款 测试车型"},
+            },
+            {
+                "group": "参数信息",
+                "category": "基本参数",
+                "name": "厂商指导价(元)",
+                "values": {"1": "10.00万"},
+            },
+        ],
+        "stats": {
+            "onsale": 1,
+            "stopsale": 0,
+            "variants": 1,
+            "params": 2,
+            "years": 1,
+            "groups": 1,
+        },
+        "warnings": [],
+    }
+
+    with tempfile.TemporaryDirectory(prefix="autohome-self-test-") as temp_dir:
+        output = export_snapshot(snapshot, Path(temp_dir))
+        if not output.exists() or output.stat().st_size < 5_000:
+            return 1
+        from openpyxl import load_workbook
+
+        workbook = load_workbook(output, read_only=True, data_only=True)
+        if "车型清单" not in workbook.sheetnames or "2026在售" not in workbook.sheetnames:
+            return 1
+        workbook.close()
+    return 0
 
 
 def public_job(job: dict[str, Any]) -> dict[str, Any]:
@@ -444,6 +504,8 @@ def handle_existing_instance() -> bool:
 
 def main() -> int:
     global SERVER
+    if "--self-test" in sys.argv:
+        return run_self_test()
     if handle_existing_instance():
         return 0
     try:
