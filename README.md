@@ -135,3 +135,29 @@ Actions 完成后下载 artifact：
 ```text
 AutohomeSpecExporter-Windows
 ```
+
+
+## macOS 构建
+
+GitHub Actions 的 `build-macos` Job 会在 macOS Runner 上执行：
+
+```bash
+./build_macos.sh
+```
+
+产物：
+
+```text
+dist/AutohomeSpecExporter_macOS_<arch>_v1.0.2.dmg
+dist/AutohomeSpecExporter_macOS_<arch>_v1.0.2.zip
+```
+
+客户使用方法：
+
+1. 下载 `AutohomeSpecExporter-macOS` artifact
+2. 解压后打开 DMG
+3. 将“汽车之家配置采集器”拖入 Applications
+4. 双击启动，浏览器会自动打开
+5. 如果 macOS 提示未验证开发者，右键应用选择“打开”
+
+当前构建使用 ad-hoc 签名，没有 Apple Developer ID 公证。如果需要完全消除 Gatekeeper 提示，需要 Apple Developer Program 证书并进行 notarization。

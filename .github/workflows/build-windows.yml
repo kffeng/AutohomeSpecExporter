@@ -1,4 +1,4 @@
-name: Build Autohome Spec Exporter for Windows
+name: Build Autohome Spec Exporter for Windows and macOS
 
 on:
   workflow_dispatch:
@@ -37,4 +37,35 @@ jobs:
           path: |
             dist/AutohomeSpecExporter_Setup_v1.0.2.exe
             dist/AutohomeSpecExporter_Portable_v1.0.2.zip
+          if-no-files-found: error
+
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: requirements-build.txt
+
+      - name: Show architecture
+        run: uname -m
+
+      - name: Build macOS app and DMG
+        run: |
+          chmod +x build_macos.sh
+          ./build_macos.sh
+
+      - name: Upload macOS build
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutohomeSpecExporter-macOS
+          path: |
+            dist/*.dmg
+            dist/*.zip
           if-no-files-found: error
