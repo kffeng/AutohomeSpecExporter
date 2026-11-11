@@ -4,7 +4,10 @@ import html
 import json
 import os
 import re
+import shutil
 import ssl
+import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -26,13 +29,31 @@ STATUS_ORDER = {20: 0, 30: 0, 40: 1, 10: 2}
 ProgressCallback = Callable[[int, str], None]
 
 
-def _ssl_context() -> ssl.SSLContext:
+def _ssl_contexts() -> list[ssl.SSLContext]:
+    contexts: list[ssl.SSLContext] = []
+
+    # 优先使用系统 Keychain，兼容 Apple 根证书、企业代理证书和用户安装证书。
+    try:
+        import truststore
+
+        contexts.append(truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT))
+    except Exception:
+        pass
+
+    # PyInstaller 打包后的 Python 可能没有系统 CA 路径，certifi 作为兜底。
     try:
         import certifi
 
-        return ssl.create_default_context(cafile=certifi.where())
+        contexts.append(ssl.create_default_context(cafile=certifi.where()))
     except Exception:
-        return ssl.create_default_context()
+        pass
+
+    contexts.append(ssl.create_default_context())
+    return contexts
+
+
+def _ssl_context() -> ssl.SSLContext:
+    return _ssl_contexts()[0]
 
 
 class AutohomeError(RuntimeError):
@@ -89,21 +110,80 @@ def _load_mock_payload(series_id: str, year: int | None) -> dict[str, Any] | Non
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _request_json(url: str, referer: str) -> dict[str, Any]:
-    request = Request(
+def _request_json_via_system_curl(url: str, referer: str) -> dict[str, Any]:
+    curl = "/usr/bin/curl" if sys.platform == "darwin" else shutil.which("curl")
+    if not curl:
+        raise AutohomeError("系统缺少 curl，无法完成安全连接。")
+
+    command = [
+        curl,
+        "-L",
+        "-sS",
+        "--compressed",
+        "--max-time",
+        "30",
+        "-A",
+        USER_AGENT,
+        "-H",
+        f"Referer: {referer}",
+        "-H",
+        "Origin: https://car.m.autohome.com.cn",
+        "-H",
+        "Accept: application/json, text/plain, */*",
         url,
-        headers={
-            "User-Agent": USER_AGENT,
-            "Referer": referer,
-            "Origin": "https://car.m.autohome.com.cn",
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "zh-CN,zh;q=0.9",
-            "Connection": "close",
-        },
+    ]
+    result = subprocess.run(
+        command,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=35,
     )
-    context = _ssl_context()
-    with urlopen(request, timeout=25, context=context) as response:
-        raw = response.read()
+    if result.returncode != 0:
+        detail = result.stderr.strip() or f"curl exit code {result.returncode}"
+        raise AutohomeError(f"连接汽车之家失败：{detail}")
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise AutohomeError("汽车之家返回的数据格式异常，请稍后重试。") from exc
+
+
+def _request_json(url: str, referer: str) -> dict[str, Any]:
+    last_ssl_error: URLError | None = None
+    raw: bytes | None = None
+
+    for context in _ssl_contexts():
+        request = Request(
+            url,
+            headers={
+                "User-Agent": USER_AGENT,
+                "Referer": referer,
+                "Origin": "https://car.m.autohome.com.cn",
+                "Accept": "application/json, text/plain, */*",
+                "Accept-Language": "zh-CN,zh;q=0.9",
+                "Connection": "close",
+            },
+        )
+        try:
+            with urlopen(request, timeout=25, context=context) as response:
+                raw = response.read()
+            break
+        except URLError as exc:
+            if isinstance(exc.reason, ssl.SSLError):
+                last_ssl_error = exc
+                continue
+            raise
+
+    if raw is None:
+        if last_ssl_error is not None:
+            try:
+                return _request_json_via_system_curl(url, referer)
+            except Exception as curl_error:
+                raise AutohomeError(
+                    f"Python 安全连接失败，系统 curl 兜底也失败：{curl_error}"
+                ) from curl_error
+        raise AutohomeError("无法建立到汽车之家的安全连接。")
+
     try:
         return json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:

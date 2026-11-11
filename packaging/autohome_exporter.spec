@@ -12,8 +12,9 @@ datas = [
 ]
 datas += collect_data_files("openpyxl")
 datas += collect_data_files("certifi")
-hiddenimports = collect_submodules("openpyxl") + [
+hiddenimports = collect_submodules("openpyxl") + collect_submodules("truststore") + [
     "certifi",
+    "truststore",
     "flask",
     "flask.json",
     "werkzeug.serving",

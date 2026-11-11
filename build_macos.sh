@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION="1.0.4"
+VERSION="1.0.5"
 ARCH="$(uname -m)"
 VENV=".build-venv-mac"
 BACKEND_DIR="dist/AutohomeSpecExporter"
