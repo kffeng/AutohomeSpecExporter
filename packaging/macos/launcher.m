@@ -1,6 +1,10 @@
 #import <Cocoa/Cocoa.h>
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>
+@property(nonatomic, strong) NSTimer *monitorTimer;
+@property(nonatomic) BOOL backendSeen;
+@property(nonatomic) NSInteger missedChecks;
+@property(nonatomic) BOOL checking;
 @end
 
 @implementation AppDelegate
@@ -8,6 +12,11 @@
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
     [self installMenu];
     [self runLauncher];
+    self.monitorTimer = [NSTimer scheduledTimerWithTimeInterval:2.0
+                                                        target:self
+                                                      selector:@selector(checkBackend:)
+                                                      userInfo:nil
+                                                       repeats:YES];
 }
 
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)sender hasVisibleWindows:(BOOL)flag {
@@ -17,6 +26,66 @@
 
 - (void)openInterface:(id)sender {
     [self runLauncher];
+}
+
+- (NSString *)currentPort {
+    NSString *dataDir = [@"~/Library/Application Support/AutohomeSpecExporter" stringByExpandingTildeInPath];
+    NSString *portFile = [dataDir stringByAppendingPathComponent:@"runtime_port.txt"];
+    NSString *value = [NSString stringWithContentsOfFile:portFile
+                                                encoding:NSUTF8StringEncoding
+                                                   error:nil];
+    value = [value stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    return value.length > 0 ? value : @"8765";
+}
+
+- (BOOL)backendHealthyAtPort:(NSString *)port {
+    NSTask *task = [[NSTask alloc] init];
+    task.executableURL = [NSURL fileURLWithPath:@"/usr/bin/curl"];
+    task.arguments = @[
+        @"-fsS",
+        @"--max-time",
+        @"1.5",
+        [NSString stringWithFormat:@"http://127.0.0.1:%@/api/health", port]
+    ];
+    NSPipe *pipe = [NSPipe pipe];
+    task.standardOutput = pipe;
+    task.standardError = [NSFileHandle fileHandleWithNullDevice];
+    NSError *error = nil;
+    if (![task launchAndReturnError:&error]) {
+        return NO;
+    }
+    NSData *data = [[pipe fileHandleForReading] readDataToEndOfFile];
+    [task waitUntilExit];
+    if (task.terminationStatus != 0) {
+        return NO;
+    }
+    NSString *body = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    return [body containsString:@"汽车之家配置采集器"];
+}
+
+- (void)checkBackend:(NSTimer *)timer {
+    if (self.checking) {
+        return;
+    }
+    self.checking = YES;
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+        BOOL healthy = [self backendHealthyAtPort:[self currentPort]];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.checking = NO;
+            if (healthy) {
+                self.backendSeen = YES;
+                self.missedChecks = 0;
+                return;
+            }
+            if (self.backendSeen) {
+                self.missedChecks += 1;
+                if (self.missedChecks >= 2) {
+                    [self.monitorTimer invalidate];
+                    [NSApp terminate:nil];
+                }
+            }
+        });
+    });
 }
 
 - (void)runLauncher {

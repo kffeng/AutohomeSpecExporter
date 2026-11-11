@@ -35,8 +35,8 @@ jobs:
         with:
           name: AutohomeSpecExporter-Windows
           path: |
-            dist/AutohomeSpecExporter_Setup_v1.0.5.exe
-            dist/AutohomeSpecExporter_Portable_v1.0.5.zip
+            dist/AutohomeSpecExporter_Setup_v1.0.6.exe
+            dist/AutohomeSpecExporter_Portable_v1.0.6.zip
           if-no-files-found: error
 
 

@@ -360,9 +360,20 @@ async function restoreSession() {
   }
 }
 
+async function loadAppVersion() {
+  try {
+    const response = await fetch("/api/app-info", { cache: "no-store" });
+    const info = await response.json();
+    $("#appVersion").textContent = `v${info.version} · 数据来自公开页面，仅供参考`;
+  } catch (_) {
+    $("#appVersion").textContent = "数据来自公开页面，仅供参考";
+  }
+}
+
 if (window.__DEMO_JOB__) {
   urlInput.value = "https://www.autohome.com.cn/config/series/8241.html";
   renderResults(window.__DEMO_JOB__);
 } else {
   restoreSession();
 }
+loadAppVersion();

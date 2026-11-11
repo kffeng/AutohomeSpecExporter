@@ -7,7 +7,7 @@
 客户只需要运行一个 Windows 安装包：
 
 ```text
-AutohomeSpecExporter_Setup_v1.0.5.exe
+AutohomeSpecExporter_Setup_v1.0.6.exe
 ```
 
 安装后双击“汽车之家配置采集器”桌面图标：
@@ -63,14 +63,14 @@ build_windows.bat
 
 ```text
 dist\AutohomeSpecExporter\AutohomeSpecExporter.exe
-dist\AutohomeSpecExporter_Setup_v1.0.5.exe
-dist\AutohomeSpecExporter_Portable_v1.0.5.zip
+dist\AutohomeSpecExporter_Setup_v1.0.6.exe
+dist\AutohomeSpecExporter_Portable_v1.0.6.zip
 ```
 
 正式发给客户时推荐发送：
 
 ```text
-AutohomeSpecExporter_Setup_v1.0.5.exe
+AutohomeSpecExporter_Setup_v1.0.6.exe
 ```
 
 不要只发送 `AutohomeSpecExporter.exe`，因为 PyInstaller 使用 one-folder 模式，运行还需要旁边的 `_internal` 文件。
@@ -148,8 +148,8 @@ GitHub Actions 的 `build-macos` Job 会在 macOS Runner 上执行：
 产物：
 
 ```text
-dist/AutohomeSpecExporter_macOS_<arch>_v1.0.5.dmg
-dist/AutohomeSpecExporter_macOS_<arch>_v1.0.5.zip
+dist/AutohomeSpecExporter_macOS_<arch>_v1.0.6.dmg
+dist/AutohomeSpecExporter_macOS_<arch>_v1.0.6.zip
 ```
 
 客户使用方法：

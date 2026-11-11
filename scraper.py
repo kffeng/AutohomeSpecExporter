@@ -149,6 +149,11 @@ def _request_json_via_system_curl(url: str, referer: str) -> dict[str, Any]:
 
 
 def _request_json(url: str, referer: str) -> dict[str, Any]:
+    # macOS 系统 curl 使用系统 Keychain，能兼容 Apple 根证书和企业代理证书。
+    # 打包后的 Python 自带 OpenSSL，证书路径与系统不一致，因此 Mac 直接走 curl。
+    if sys.platform == "darwin":
+        return _request_json_via_system_curl(url, referer)
+
     last_ssl_error: URLError | None = None
     raw: bytes | None = None
 

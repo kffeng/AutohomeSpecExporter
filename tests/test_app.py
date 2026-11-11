@@ -101,14 +101,23 @@ class AppAssetTests(unittest.TestCase):
         context = _ssl_context()
         self.assertIsInstance(context, __import__("ssl").SSLContext)
 
+    def test_macos_uses_system_curl_first(self) -> None:
+        with patch("scraper.sys.platform", "darwin"), patch(
+            "scraper._request_json_via_system_curl",
+            return_value={"returncode": 0, "result": {"ok": True}},
+        ) as curl_request:
+            payload = _request_json("https://example.test/api", "https://example.test/")
+        self.assertEqual(payload["returncode"], 0)
+        curl_request.assert_called_once()
+
     def test_ssl_failure_falls_back_to_system_curl(self) -> None:
         import ssl
         from urllib.error import URLError
 
         certificate_error = ssl.SSLCertVerificationError("certificate verify failed")
-        with patch("scraper._ssl_contexts", return_value=[object()]), patch(
-            "scraper.urlopen", side_effect=URLError(certificate_error)
-        ), patch(
+        with patch("scraper.sys.platform", "linux"), patch(
+            "scraper._ssl_contexts", return_value=[object()]
+        ), patch("scraper.urlopen", side_effect=URLError(certificate_error)), patch(
             "scraper._request_json_via_system_curl",
             return_value={"returncode": 0, "result": {"ok": True}},
         ) as curl_fallback:
